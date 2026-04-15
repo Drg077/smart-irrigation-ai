@@ -5,7 +5,7 @@ import numpy as np
 app = Flask(__name__)
 
 # Load trained model (correct path)
-model = pickle.load(open("../model/irrigation_model.pkl", "rb"))
+model = pickle.load(open("model/irrigation_model.pkl", "rb"))
 
 @app.route("/")
 def home():
