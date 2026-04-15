@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>AgriMind Pro</title>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+body {
+    font-family: 'Segoe UI', sans-serif;
+    background: linear-gradient(135deg, #e8f5e9, #f1f8e9);
+    margin: 0;
+    padding: 25px;
+}
+
+.header {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 25px;
+}
+
+.cards {
+    display: flex;
+    gap: 20px;
+}
+
+.card {
+    flex: 1;
+    background: rgba(255,255,255,0.8);
+    padding: 20px;
+    border-radius: 14px;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.08);
+}
+
+.grid {
+    display: flex;
+    gap: 20px;
+    margin-top: 20px;
+}
+
+.box {
+    background: white;
+    padding: 25px;
+    border-radius: 14px;
+    flex: 1;
+}
+
+.badge {
+    background: #c8e6c9;
+    padding: 6px 12px;
+    border-radius: 20px;
+}
+
+.alert {
+    padding: 12px;
+    border-radius: 10px;
+    margin-top: 10px;
+}
+
+.green { background: #e8f5e9; }
+.orange { background: #fff3e0; }
+
+.inputs {
+    margin: 25px 0;
+    display: flex;
+    gap: 10px;
+}
+
+input, button {
+    padding: 10px;
+    border-radius: 8px;
+    border: 1px solid #ccc;
+}
+
+button {
+    background: #2e7d32;
+    color: white;
+    cursor: pointer;
+}
+</style>
+</head>
+
+<body>
+
+<h2>🌱 AgriMind Dashboard</h2>
+
+<div class="cards">
+    <div class="card"><small>SOIL MOISTURE</small><h2 id="soil_moisture_display">--</h2></div>
+    <div class="card"><small>TEMPERATURE</small><h2 id="temperature_display">--</h2></div>
+    <div class="card"><small>SOIL HEALTH</small><h2 id="health_display">--</h2></div>
+    <div class="card"><small>HUMIDITY</small><h2 id="humidity_display">--</h2></div>
+</div>
+
+<div class="inputs">
+    <input type="number" id="soil_moisture" placeholder="Soil Moisture">
+    <input type="number" id="temperature" placeholder="Temperature">
+    <input type="number" id="humidity" placeholder="Humidity">
+    <button onclick="predict()">Predict</button>
+</div>
+
+<div class="grid">
+    <div class="box">
+        <h3>Irrigation Decision</h3>
+        <h2 id="result">--</h2>
+        <div class="badge" id="badge">--</div>
+    </div>
+
+    <div class="box">
+        <h3>Alerts</h3>
+        <div id="alerts"></div>
+    </div>
+</div>
+
+<div class="grid">
+    <div class="box">
+        <h3>Soil Moisture Trend</h3>
+        <canvas id="chart"></canvas>
+    </div>
+</div>
+
+<script>
+let chart;
+let moistureHistory = [];
+let labels = [];
+
+async function predict() {
+    const soil_moisture = Number(document.getElementById("soil_moisture").value);
+    const temperature = Number(document.getElementById("temperature").value);
+    const humidity = Number(document.getElementById("humidity").value);
+
+    if (!soil_moisture || !temperature || !humidity) {
+        alert("Enter all values");
+        return;
+    }
+
+    document.getElementById("soil_moisture_display").innerText = soil_moisture;
+    document.getElementById("temperature_display").innerText = temperature;
+    document.getElementById("humidity_display").innerText = humidity;
+
+    const health = Math.min(100, soil_moisture + humidity/2);
+    document.getElementById("health_display").innerText = Math.round(health);
+
+    try {
+        const res = await fetch("http://127.0.0.1:10000/predict", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({
+                soil_moisture,
+                temperature,
+                humidity
+            })
+        });
+
+        const data = await res.json();
+
+        if (data.irrigation === "YES") {
+            document.getElementById("result").innerText = "Irrigation Needed";
+            document.getElementById("badge").innerText = "Action Required";
+        } else {
+            document.getElementById("result").innerText = "Water Not Needed";
+            document.getElementById("badge").innerText = "Optimal Level";
+        }
+
+        generateAlerts(soil_moisture, temperature, humidity);
+        updateChart(soil_moisture);
+
+    } catch (e) {
+        alert("API error");
+    }
+}
+
+function generateAlerts(soil_moisture, temperature, humidity) {
+    const div = document.getElementById("alerts");
+    div.innerHTML = "";
+
+    if (soil_moisture < 400) {
+        div.innerHTML += `<div class="alert orange">⚠️ Low soil moisture</div>`;
+    } 
+    else if (soil_moisture > 650) {
+        div.innerHTML += `<div class="alert orange">💧 Too much water</div>`;
+    } 
+    else {
+        div.innerHTML += `<div class="alert green">✅ Moisture optimal</div>`;
+    }
+
+    if (temperature > 30) {
+        div.innerHTML += `<div class="alert orange">🌡️ High temperature</div>`;
+    }
+
+    if (humidity < 40) {
+        div.innerHTML += `<div class="alert orange">💨 Low humidity</div>`;
+    }
+}
+
+function updateChart(value) {
+    const ctx = document.getElementById('chart').getContext('2d');
+
+    if (moistureHistory.length >= 7) {
+        moistureHistory.shift();
+        labels.shift();
+    }
+
+    moistureHistory.push(value);
+    labels.push(new Date().toLocaleTimeString());
+
+    if (chart) chart.destroy();
+
+    chart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Soil Moisture',
+                data: moistureHistory,
+                tension: 0.4,
+                fill: true
+            }]
+        }
+    });
+}
+</script>
+
+</body>
+</html>

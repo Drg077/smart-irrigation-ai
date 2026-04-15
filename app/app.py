@@ -1,11 +1,12 @@
 from flask import Flask, request, jsonify
+from flask_cors import CORS
 import pickle
 import numpy as np
 
 app = Flask(__name__)
-
+CORS(app)
 # Load trained model (correct path)
-model = pickle.load(open("model/irrigation_model.pkl", "rb"))
+model = pickle.load(open("../model/irrigation_model.pkl", "rb"))
 
 @app.route("/")
 def home():
@@ -36,3 +37,4 @@ def predict():
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=10000)
+
