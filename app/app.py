@@ -2,13 +2,15 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 import pickle
 import numpy as np
-from crop_predict import predict_crop
-
+from app.crop_predict import predict_crop
+from routes.chatbot import chatbot_bp
 app = Flask(__name__)
 CORS(app)
 
 # Load irrigation model
-model = pickle.load(open("../model/irrigation_model.pkl", "rb"))
+model = pickle.load(open("./model/irrigation_model.pkl", "rb"))
+
+app.register_blueprint(chatbot_bp, url_prefix='/api/chatbot')
 
 @app.route("/")
 def home():

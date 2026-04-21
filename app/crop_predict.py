@@ -1,7 +1,10 @@
 import pickle
 import numpy as np
 
-model = pickle.load(open("../model/crop_model.pkl", "rb"))
+import os
+
+model_path = os.path.join(os.path.dirname(__file__), "..", "model", "crop_model.pkl")
+model = pickle.load(open(model_path, "rb"))
 
 def predict_crop(N, P, K, temperature, humidity, ph, rainfall):
     features = np.array([[N, P, K, temperature, humidity, ph, rainfall]])
